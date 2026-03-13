@@ -1,0 +1,3 @@
+*.o
+*.cc
+assignments/PA1/lexer
