@@ -45,9 +45,13 @@ extern YYSTYPE cool_yylval;
 
 %}
 
+%option noyywrap
+
 /*
  * Define names for regular expressions here.
  */
+
+DIGIT       [0-9]
 
 DARROW          =>
 
@@ -63,6 +67,10 @@ DARROW          =>
   */
 {DARROW}		{ return (DARROW); }
 
+{DIGIT}     {
+            printf( "An integer: %s (%d)\n", yytext,
+                    atoi( yytext ) );
+            }
  /*
   * Keywords are case-insensitive except for the values true and false,
   * which must begin with a lower-case letter.

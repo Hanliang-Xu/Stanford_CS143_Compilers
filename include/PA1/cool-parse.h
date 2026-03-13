@@ -109,6 +109,7 @@ typedef Cases_class *Cases;
      NOT = 281,
      LE = 282,
      ERROR = 283,
+     /* Can ignore LET_STMT for PA1, used only for the parser */
      LET_STMT = 285
    };
 #endif

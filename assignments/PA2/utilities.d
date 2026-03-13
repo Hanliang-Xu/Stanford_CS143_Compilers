@@ -1,4 +1,6 @@
-utilities.o utilities.d : utilities.cc ../../include/PA2/copyright.h \
-  ../../include/PA2/cool-io.h ../../include/PA2/cool-parse.h \
-  ../../include/PA2/tree.h ../../include/PA2/stringtab.h \
-  ../../include/PA2/list.h ../../include/PA2/utilities.h
+utilities.o utilities.d : utilities.cc ../../include/PA3/copyright.h \
+  ../../include/PA3/cool-io.h ../../include/PA3/copyright.h \
+  ../../include/PA3/cool-parse.h ../../include/PA3/cool-io.h \
+  ../../include/PA3/tree.h ../../include/PA3/stringtab.h \
+  ../../include/PA3/list.h ../../include/PA3/stringtab.h \
+  ../../include/PA3/utilities.h
