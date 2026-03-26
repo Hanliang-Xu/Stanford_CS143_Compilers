@@ -13,5 +13,6 @@
                 "ms-vscode.cpptools"
             ]
         }
-    }
+    },
+    "postCreateCommand": "bash .devcontainer/setup.sh"
 }
