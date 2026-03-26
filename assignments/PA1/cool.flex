@@ -71,6 +71,8 @@ ISVOID          [Ii][Ss][Vv][Oo][Ii][Dd]
 TRUE            t[Rr][Uu][Ee]
 FALSE           f[Aa][Ll][Ss][Ee]
 
+%x              STR COMMENT
+
 %%
 
  /*
@@ -83,7 +85,6 @@ FALSE           f[Aa][Ll][Ss][Ee]
   * which must begin with a lower-case letter.
   */
 
-{DARROW}		{ return (DARROW); }
 {CLASS}     { return (CLASS); }
 {ELSE}      { return (ELSE); }
 {FI}        { return (FI); }
@@ -98,11 +99,21 @@ FALSE           f[Aa][Ll][Ss][Ee]
 {CASE}      { return (CASE); }
 {ESAC}      { return (ESAC); }
 {OF}        { return (OF); }
+{DARROW}		{ return (DARROW); }
 {NEW}       { return (NEW); }
 {ISVOID}    { return (ISVOID); }
 {TRUE}      { yylval.boolean = true; return (BOOL_CONST); }
 {FALSE}     { yylval.boolean = false; return (BOOL_CONST); }
-    
+
+"(*"        BEGIN(COMMENT);
+
+<COMMENT>{
+  [^*]*       {}
+  "*"+[^*)]*  {}
+  "*"+")"     { BEGIN(INITIAL); }
+  <<EOF>>     { yylval.error_msg = "EOF in comment"; BEGIN(INITIAL); return (ERROR); }
+}
+
  /*
   *  String constants (C syntax)
   *  Escape sequence \c is accepted for all characters c. Except for 
@@ -110,5 +121,6 @@ FALSE           f[Aa][Ll][Ss][Ee]
   *
   */
 
+<<EOF>>      { yyterminate(); }
 
 %%
