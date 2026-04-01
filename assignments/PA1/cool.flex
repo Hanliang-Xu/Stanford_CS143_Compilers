@@ -43,6 +43,8 @@ extern YYSTYPE cool_yylval;
  *  Add Your own definitions here
  */
 
+int comment_depth_counter;
+
 %}
 
 %option noyywrap
@@ -71,7 +73,7 @@ ISVOID          [Ii][Ss][Vv][Oo][Ii][Dd]
 TRUE            t[Rr][Uu][Ee]
 FALSE           f[Aa][Ll][Ss][Ee]
 
-%x              STR COMMENT
+%x              STR LINE_COMMENT BLOCK_COMMENT
 
 %%
 
@@ -105,13 +107,23 @@ FALSE           f[Aa][Ll][Ss][Ee]
 {TRUE}      { yylval.boolean = true; return (BOOL_CONST); }
 {FALSE}     { yylval.boolean = false; return (BOOL_CONST); }
 
-"(*"        BEGIN(COMMENT);
+"--"        BEGIN(LINE_COMMENT);
+"(*"        BEGIN(BLOCK_COMMENT);
 
-<COMMENT>{
-  [^*]*       {}
-  "*"+[^*)]*  {}
-  "*"+")"     { BEGIN(INITIAL); }
-  <<EOF>>     { yylval.error_msg = "EOF in comment"; BEGIN(INITIAL); return (ERROR); }
+<LINE_COMMENT>{
+  "\n"          { ++curr_lineno; BEGIN(INITIAL); }
+  <<EOF>>       { BEGIN(INITIAL); }
+  [^\n<<EOF>>]* {}
+}
+
+<BLOCK_COMMENT>{
+  "\n"          { ++curr_lineno; }
+  [^(*\n]*      {}
+  "*"+[^(*)\n]* {}
+  "("+[^(*\n]*  {}
+  "(*"          { ++comment_depth_counter; }
+  "*"+")"       { --comment_depth_counter; if (comment_depth_counter == 0) {BEGIN(INITIAL);}  }
+  <<EOF>>       { yylval.error_msg = "EOF in comment"; BEGIN(INITIAL); return (ERROR); }
 }
 
  /*
@@ -124,3 +136,11 @@ FALSE           f[Aa][Ll][Ss][Ee]
 <<EOF>>      { yyterminate(); }
 
 %%
+
+/*
+ *  User code section
+ */
+void reset_lexer_state() {
+  comment_depth_counter = 1;
+  BEGIN(INITIAL);
+}

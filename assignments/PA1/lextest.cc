@@ -56,6 +56,8 @@ int  cool_yydebug;
 extern void dump_cool_token(ostream& out, int lineno, 
 			    int token, YYSTYPE yylval);
 
+// defined in cool.flex
+extern void reset_lexer_state();
 
 int main(int argc, char** argv) {
 	int token;
@@ -73,6 +75,8 @@ int main(int argc, char** argv) {
             // this counter, so let's make the stand-alone lexer
             // do the same thing
             curr_lineno = 1;
+
+			reset_lexer_state();
 
 	    //
 	    // Scan and print all tokens.
