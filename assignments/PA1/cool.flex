@@ -73,6 +73,17 @@ ISVOID          [Ii][Ss][Vv][Oo][Ii][Dd]
 TRUE            t[Rr][Uu][Ee]
 FALSE           f[Aa][Ll][Ss][Ee]
 
+DIGIT           [0-9]
+INT             {DIGIT}+
+CAP_LETTER      [A-Z]
+LOW_LETTER      [a-z]
+LETTER          {CAP_LETTER}|{LOW_LETTER}
+WHITE_SPACE     [ \f\r\t\v]
+ID_CHAR         {LETTER}|{DIGIT}|"_"
+TYPEID          {CAP_LETTER}{ID_CHAR}*
+OBJECTID        {LOW_LETTER}{ID_CHAR}*
+
+SINGLE_CHAR     [()+*/~<={}:;.,-]
 %x              STR LINE_COMMENT BLOCK_COMMENT
 
 %%
@@ -107,13 +118,23 @@ FALSE           f[Aa][Ll][Ss][Ee]
 {TRUE}      { yylval.boolean = true; return (BOOL_CONST); }
 {FALSE}     { yylval.boolean = false; return (BOOL_CONST); }
 
+{INT}       { yylval.symbol = inttable.add_string(yytext); return (INT_CONST); }
+
+"<-"        { return (ASSIGN); }
+"<="        { return (LE); }
+"\n"        { ++curr_lineno; }
+{SINGLE_CHAR}   { return (yytext[0]); }
+{WHITE_SPACE}   {}
+
 "--"        BEGIN(LINE_COMMENT);
 "(*"        BEGIN(BLOCK_COMMENT);
+"*)"        { yylval.error_msg = "Unmatched *)"; return (ERROR); }
+
+{TYPEID}   { yylval.symbol = idtable.add_string(yytext); return (TYPEID); }
+{OBJECTID} { yylval.symbol = idtable.add_string(yytext); return (OBJECTID); }
 
 <LINE_COMMENT>{
   "\n"          { ++curr_lineno; BEGIN(INITIAL); }
-  <<EOF>>       { BEGIN(INITIAL); }
-  [^\n<<EOF>>]* {}
 }
 
 <BLOCK_COMMENT>{
@@ -125,6 +146,8 @@ FALSE           f[Aa][Ll][Ss][Ee]
   "*"+")"       { --comment_depth_counter; if (comment_depth_counter == 0) {BEGIN(INITIAL);}  }
   <<EOF>>       { yylval.error_msg = "EOF in comment"; BEGIN(INITIAL); return (ERROR); }
 }
+
+.               { yylval.error_msg = "Unmatched char now"; return (ERROR); }
 
  /*
   *  String constants (C syntax)
