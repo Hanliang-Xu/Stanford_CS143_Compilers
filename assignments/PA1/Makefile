@@ -1,5 +1,5 @@
 
-ASSN = 2
+ASSN = 1
 CLASS= cs143
 CLASSDIR= ../..
 FLEX_PREFIX = /opt/homebrew/opt/flex
