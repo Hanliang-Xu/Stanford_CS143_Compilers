@@ -71,6 +71,7 @@ OF              [Oo][Ff]
 DARROW          =>
 NEW             [Nn][Ee][Ww]
 ISVOID          [Ii][Ss][Vv][Oo][Ii][Dd]
+NOT             [Nn][Oo][Tt]
 TRUE            t[Rr][Uu][Ee]
 FALSE           f[Aa][Ll][Ss][Ee]
 
@@ -84,7 +85,7 @@ ID_CHAR         {LETTER}|{DIGIT}|"_"
 TYPEID          {CAP_LETTER}{ID_CHAR}*
 OBJECTID        {LOW_LETTER}{ID_CHAR}*
 
-SINGLE_CHAR     [()+*/~<>={}\[\]:;.,-]
+SINGLE_CHAR     [()+*/~<={}:;.,-@]
 %x              STR LINE_COMMENT BLOCK_COMMENT
 
 %%
@@ -116,6 +117,7 @@ SINGLE_CHAR     [()+*/~<>={}\[\]:;.,-]
 {DARROW}		{ return (DARROW); }
 {NEW}       { return (NEW); }
 {ISVOID}    { return (ISVOID); }
+{NOT}       { return (NOT); }
 {TRUE}      { yylval.boolean = true; return (BOOL_CONST); }
 {FALSE}     { yylval.boolean = false; return (BOOL_CONST); }
 
@@ -149,12 +151,20 @@ SINGLE_CHAR     [()+*/~<>={}\[\]:;.,-]
 }
 
 <STR>{
-  \\\n    { ++curr_lineno; *string_buf_ptr++ = '\n'; }
-  \\b     { *string_buf_ptr++ = '\b'; }
-  \\t     { *string_buf_ptr++ = '\t'; }
-  \\n     { *string_buf_ptr++ = '\n'; }
-  \\f     { *string_buf_ptr++ = '\f'; }
-  \\[^btnf]     { *string_buf_ptr++ = yytext[1]; }
+  \\([^\0])  {
+    if (string_error) ;
+    else if (string_buf_ptr >= (string_buf + MAX_STR_CONST - 1)) {
+      string_error = "String constant too long";
+    } else {
+      char c = yytext[1];
+      if (c == 'b')         *string_buf_ptr++ = '\b';
+      else if (c == 't')    *string_buf_ptr++ = '\t';
+      else if (c == 'n')    *string_buf_ptr++ = '\n';
+      else if (c == 'f')    *string_buf_ptr++ = '\f';
+      else                  *string_buf_ptr++ = c;
+    }
+    if (yytext[1] == '\n')  ++curr_lineno;
+  }
   \n            {
                   BEGIN(INITIAL);
                   ++curr_lineno;
@@ -183,7 +193,8 @@ SINGLE_CHAR     [()+*/~<>={}\[\]:;.,-]
                   return (ERROR);
                 }
   .             {
-                  if (!string_error && string_buf_ptr >= (string_buf + MAX_STR_CONST - 1)) {
+                  if (string_error) ;
+                  else if (string_buf_ptr >= (string_buf + MAX_STR_CONST - 1)) {
                     string_error = "String constant too long";
                   } else {
                     *string_buf_ptr++ = yytext[0];
