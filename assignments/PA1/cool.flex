@@ -43,8 +43,9 @@ extern YYSTYPE cool_yylval;
  *  Add Your own definitions here
  */
 
-int comment_depth_counter;
+int comment_depth_counter = 0;
 
+const char *string_error;
 %}
 
 %option noyywrap
@@ -83,7 +84,7 @@ ID_CHAR         {LETTER}|{DIGIT}|"_"
 TYPEID          {CAP_LETTER}{ID_CHAR}*
 OBJECTID        {LOW_LETTER}{ID_CHAR}*
 
-SINGLE_CHAR     [()+*/~<={}:;.,-]
+SINGLE_CHAR     [()+*/~<>={}\[\]:;.,-]
 %x              STR LINE_COMMENT BLOCK_COMMENT
 
 %%
@@ -127,27 +128,71 @@ SINGLE_CHAR     [()+*/~<={}:;.,-]
 {WHITE_SPACE}   {}
 
 "--"        BEGIN(LINE_COMMENT);
-"(*"        BEGIN(BLOCK_COMMENT);
+"(*"        { BEGIN(BLOCK_COMMENT); ++comment_depth_counter;}
 "*)"        { yylval.error_msg = "Unmatched *)"; return (ERROR); }
+"\""        { string_buf_ptr = string_buf; string_error = NULL; BEGIN(STR); }
 
 {TYPEID}   { yylval.symbol = idtable.add_string(yytext); return (TYPEID); }
 {OBJECTID} { yylval.symbol = idtable.add_string(yytext); return (OBJECTID); }
 
 <LINE_COMMENT>{
+  [^\n]*        {}
   "\n"          { ++curr_lineno; BEGIN(INITIAL); }
 }
 
 <BLOCK_COMMENT>{
-  "\n"          { ++curr_lineno; }
-  [^(*\n]*      {}
-  "*"+[^(*)\n]* {}
-  "("+[^(*\n]*  {}
-  "(*"          { ++comment_depth_counter; }
-  "*"+")"       { --comment_depth_counter; if (comment_depth_counter == 0) {BEGIN(INITIAL);}  }
-  <<EOF>>       { yylval.error_msg = "EOF in comment"; BEGIN(INITIAL); return (ERROR); }
+  \n      { ++curr_lineno; }
+  "(*"    { ++comment_depth_counter; }
+  "*)"    { --comment_depth_counter; if (comment_depth_counter == 0) {BEGIN(INITIAL);} }
+  <<EOF>> { yylval.error_msg = "EOF in comment"; BEGIN(INITIAL); return (ERROR); }
+  .       {}
 }
 
-.               { yylval.error_msg = "Unmatched char now"; return (ERROR); }
+<STR>{
+  \\\n    { ++curr_lineno; *string_buf_ptr++ = '\n'; }
+  \\b     { *string_buf_ptr++ = '\b'; }
+  \\t     { *string_buf_ptr++ = '\t'; }
+  \\n     { *string_buf_ptr++ = '\n'; }
+  \\f     { *string_buf_ptr++ = '\f'; }
+  \\[^btnf]     { *string_buf_ptr++ = yytext[1]; }
+  \n            {
+                  BEGIN(INITIAL);
+                  ++curr_lineno;
+                  yylval.error_msg = (char *)(string_error ? string_error : "Unterminated string constant");
+                  return (ERROR);
+                }
+  \0            {
+                  if (!string_error) {
+                    string_error = "String contains null character";
+                  }
+                }
+  \"            {
+                  BEGIN(INITIAL);
+                  if (string_error) {
+                    yylval.error_msg = (char *)string_error;
+                    return (ERROR);
+                  }
+                  *string_buf_ptr = '\0';
+                  yylval.symbol = stringtable.add_string(string_buf);
+                  string_buf_ptr = string_buf;
+                  return (STR_CONST);
+                }
+  <<EOF>>       {
+                  BEGIN(INITIAL);
+                  yylval.error_msg = (char *)(string_error ? string_error : "EOF in string constant");
+                  return (ERROR);
+                }
+  .             {
+                  if (!string_error && string_buf_ptr >= (string_buf + MAX_STR_CONST - 1)) {
+                    string_error = "String constant too long";
+                  } else {
+                    *string_buf_ptr++ = yytext[0];
+                  }
+                }
+  
+}
+
+.               { yylval.error_msg = strdup(yytext); return (ERROR); }
 
  /*
   *  String constants (C syntax)
@@ -164,6 +209,7 @@ SINGLE_CHAR     [()+*/~<={}:;.,-]
  *  User code section
  */
 void reset_lexer_state() {
-  comment_depth_counter = 1;
+  string_buf_ptr = string_buf;
+  comment_depth_counter = 0;
   BEGIN(INITIAL);
 }
