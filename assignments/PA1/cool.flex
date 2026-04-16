@@ -85,7 +85,7 @@ ID_CHAR         {LETTER}|{DIGIT}|"_"
 TYPEID          {CAP_LETTER}{ID_CHAR}*
 OBJECTID        {LOW_LETTER}{ID_CHAR}*
 
-SINGLE_CHAR     [()+*/~<={}:;.,-@]
+SINGLE_CHAR     [-()+*/~<={}:;.,@]
 %x              STR LINE_COMMENT BLOCK_COMMENT
 
 %%
